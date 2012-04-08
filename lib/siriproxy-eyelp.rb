@@ -109,7 +109,7 @@ class SiriProxy::Plugin::Eyelp < SiriProxy::Plugin
     	$mapla = object["properties"]["latitude"]
 	end 
 
-listen_for /suche(.*)/i do |phrase|
+listen_for /search (.*)/i do |phrase|
 	ss = ""
 	if $maplo == NIL 
 		ss = "nogps"
@@ -117,27 +117,24 @@ listen_for /suche(.*)/i do |phrase|
 	#if phrase.match(/(ein )/)  # cleaning searchstring: eg:  ein hotel = hotel
 	phrase = phrase.insert(0, " ")
 	begin
-	phrase = phrase.sub( " ein ", " " )
-	phrase = phrase.sub( " eine ", " " )
-	phrase = phrase.sub( " einen ", " " )
-	phrase = phrase.sub( " den ", " " )
-	phrase = phrase.sub( " das ", " " )
-	phrase = phrase.sub( " die ", " " )
+	phrase = phrase.sub( " for a ", " " )
+	phrase = phrase.sub( " for the ", " " )
+
 	rescue
 	end
 	if @yelp_key == NIL
-		say "Es gibt ein Problem mit dem Yelp-Key, bitte config.yml überprüfen", spoken: "Es gibt ein Problem mit dem Jelp ki, bitte konfig punkt Y M L überprüfen"
+		say "There is a problem with the Yelp Key, check config.yml", spoken: "There is a problem with the Yelp Key, check config.yml"
 		request_completed
 	elsif ss == "nogps"
-		say "Kein GPS Signal - Ich suche in Wien", spoken: "Kein GPS Signal, Ich suche in Wien"
-		phrase = phrase.sub( " in ", " " )
-		phrase = phrase.sub( " hier ", " " )
-		phrase = phrase.sub( " global ", " " )
-		phrase = phrase.strip		
-		dos = "http://api.yelp.com/business_review_search?term=" + phrase + "&location=Wien&limit=15&ywsid=" + @yelp_key.to_s
-		ss = "in"
-	elsif phrase.match(/( hier )/)  # catching here search: suche hier *   :Range 1 
-		ma = phrase.match(/( hier )/)
+		say "Please enable Location services"
+		#phrase = phrase.sub( " in ", " " )
+		#phrase = phrase.sub( " hier ", " " )
+		#phrase = phrase.sub( " global ", " " )
+		#phrase = phrase.strip		
+		#dos = "http://api.yelp.com/business_review_search?term=" + phrase + "&location=Wien&limit=15&ywsid=" + @yelp_key.to_s
+		#ss = "in"
+	elsif phrase.match(/( here )/)  # catching here search: suche hier *   :Range 1 
+		ma = phrase.match(/( here )/)
 		part = ma.post_match.strip
 		dos = "http://api.yelp.com/business_review_search?term=" + part.to_s + "&lat=" + $mapla.to_s + "&long=" + $maplo.to_s + "&radius=1&limit=10&ywsid=" + @yelp_key.to_s
 	elsif phrase.match(/( in )/) # catching city-based search:  suche * in *
@@ -164,7 +161,7 @@ listen_for /suche(.*)/i do |phrase|
      	doc = ""
     end
     if doc == ""
-    	say "Bitte verwende 'suche' + suchparameter", spoken: "Fehler beim Suchen" 
+    	say "Please use 'search' + search parameters" spoken, "Failed to find"
     	request_completed
     else
 	json = doc.to_s
@@ -178,9 +175,9 @@ listen_for /suche(.*)/i do |phrase|
 	busi = empl['businesses']
 	if busi.empty? == true
 		if ss == "in"
-		say "Keine Einträge in Yelp für '" + part + "' in '" + part2 +"' gefunden."
+		say "No entries in Yelp for '" + part + "' in '" + part2 +"' found."
 		else
-		say "Keine Einträge in Yelp für '" + part + "' gefunden."
+		say "No entries in Yelp for '" + part + "' found."
 		end
 	else
 		if ss == "in" #no sorting if city-search - to get best query on top
@@ -198,9 +195,9 @@ listen_for /suche(.*)/i do |phrase|
  			x += 1
  		end
 		if x.to_s == 1	
-			say "Ich habe einen Eintrag gefunden."
+			say "I found an entry."
 		else	
-			say "Ich habe " + x.to_s + " Einträge gefunden."
+			say "I found  " + x.to_s
 		end	
 		print map_snippet.items
     	utterance = SiriAssistantUtteranceView.new("")
@@ -216,10 +213,10 @@ end
 listen_for /(testi|test eins)/i do    
 	
 	#teststring
-	str = "Restaurant Il Sole Wiener Neustadt"
+	str = "Restaurant in New York"
 	
-	if str.match(/(hier )/)
-		ma = str.match(/(hier )/)
+	if str.match(/(here )/)
+		ma = str.match(/(here )/)
 		print ma.post_match
 	elsif str.match(/(in )/)
 		mb = str.match(/(in )/)	
@@ -247,7 +244,7 @@ listen_for /(testi|test eins)/i do
     	map_snippet.items << SiriMapItem.new(label=data['name'], location=siri_location, detailType="FRIEND_ITEM") # BUSINESS_ITEM")
  		x += 1
  	end
-	say "Ich habe " + x.to_s + " Einträge gefunden"
+	say "I found " + x.to_s
 	print map_snippet.items
     utterance = SiriAssistantUtteranceView.new("")
     add_views.views << utterance
@@ -257,14 +254,14 @@ listen_for /(testi|test eins)/i do
 end
 
 # Where am i - shows map with current location
-listen_for /(Wo bin ich|Wo bist du)/i do
+listen_for /(Where am i)/i do
 	if $mapla == NIL
-    	say "Das wüßte ich auch gerne, aber ohne GPS Daten bin ich nur ein dummes Telefon."
+    	say "I'm lost as well, please enable the location services and I will find our way"
     else
         adr = $mapla.to_s + "," + $maplo.to_s
 	addr = getaddress(adr)
 	ele = getheight(adr)
-	ell = ele.to_s + " Höhenmeter"
+	ell = ele.to_s + " meters"
 	addrr = addr.split(",")
 	addr1 = addrr[0].strip
 	addr2 = addrr[1].split
@@ -275,7 +272,7 @@ listen_for /(Wo bin ich|Wo bist du)/i do
     	add_views.make_root(last_ref_id)
     	map_snippet = SiriMapItemSnippet.new(true)
  		siri_location = SiriLocation.new("", addr1, addr22, "", "", addr21, $mapla.to_f, $maplo.to_s) 
-	    map_snippet.items << SiriMapItem.new(label="#{ele} Höhenmeter", location=siri_location, detailType="BUSINESS_ITEM")
+	    map_snippet.items << SiriMapItem.new(label="#{ele} meters", location=siri_location, detailType="BUSINESS_ITEM")
 	    print map_snippet.items
 	    utterance = SiriAssistantUtteranceView.new(addr1)
 		add_views.views << utterance
@@ -288,11 +285,11 @@ listen_for /(Wo bin ich|Wo bist du)/i do
   end
 
 # safes position in the file "locsave.txt"
-listen_for /(speicher Position|Position speichern|Position abspeichern|Position merken|Positionen speichern|speicherPosition)/i do   
+listen_for /(save Position| remember Position|save location|mark location )/i do   
 	lat = $mapla
 	lon = $maplo
 	if lat == nil
-		say "Bitte schalten sie den Ortungsdienst ein."
+		say "Please enable location services."
 	else
 		lats = lat.to_s
 		latt = lats.match(/[.]/)
@@ -302,9 +299,9 @@ listen_for /(speicher Position|Position speichern|Position abspeichern|Position 
 		aFile.write(mystr)
 		aFile.close
 		if latt < 13
-			say "ungenaues GPS Signal - bitte nocheinmal speichern" 
+			say "Low GPS signal, please try again"
 		else
-			say "aktueller Ort gespeichert, zum Abrufen sage 'zeige Position'", spoken: "aktueller Ort gespeichert"
+			say "current location is stored, to retrieve say 'show location'", spoken: "location stored"
 		end
 	end
 	#say "lat:" + $ortla.to_s + "  long:" + $ortlo.to_s , spoken: "" 
@@ -312,7 +309,7 @@ listen_for /(speicher Position|Position speichern|Position abspeichern|Position 
 end
 
 # loads position from a global variable
-listen_for /(zeige Ort|zeige Position|zeige gespeicherten Ort|Position zeigen|Position anzeigen|Position zeige)/i do 
+listen_for /(show location|retrieve location)/i do 
 	aFile = File.new("plugins/siriproxy-eyelp/locsave.txt", "r")
 	str = aFile.gets.to_s
 	aFile.close
@@ -322,20 +319,20 @@ listen_for /(zeige Ort|zeige Position|zeige gespeicherten Ort|Position zeigen|Po
 		lon = strloc.post_match
 	end
 	if lat.to_s == ""
-		say "leeres File, verwende zuerst 'Position speichern'", spoken: "Ich habe keine gespeicherte Position gefunden."
+		say "No location found 'save position'", spoken: "No location stored"
 	else
 	lon1 = lon.to_f
 	lat1 = lat.to_f
 	lon2 = $maplo
 	lat2 = $mapla
 	if lon2 == NIL
-		say "Bitte Ortungsdienst einschalten."
+		say "Please turn on location services"
 	else
 		haversine_distance( lat1, lon1, lat2, lon2 )
 		entf = @distances['km']
 		entf = (entf * 10**3).round.to_f / 10**3
 		if entf.to_s == "0.0"
-			say "Sie sind am Ziel angelangt."
+			say "You have reached the target."
 			print entf
 		elsif entf > 0.0 and entf < 1.000
 			entf = (entf * 10**3).round.to_f / 10**3
@@ -343,10 +340,10 @@ listen_for /(zeige Ort|zeige Position|zeige gespeicherten Ort|Position zeigen|Po
 			ent = (entf * 1000)
 			ent = ent.to_s
 			ent = ent.match(/(.)/)
-			say "Entfernung zum Ziel: " + ent.to_s + " m", spoken: "Entfernung zum Ziel: " + ent.to_s + " Meter"
+			say "Distance to target: " + ent.to_s + " m", spoken: "Distance to target: " + ent.to_s + " Meter"
 	
 		else
-			say "Entfernung zum Ziel: " + entf.to_s + " km"
+			say "Distance to target: " + entf.to_s + " km"
 		end
 	
 		add_views = SiriAddViews.new
@@ -355,7 +352,7 @@ listen_for /(zeige Ort|zeige Position|zeige gespeicherten Ort|Position zeigen|Po
     	siri_location = SiriLocation.new("gepeicherter Ort" , "gepeicherter Ort", "gepeicherter Ort", "gepeicherter Ort", "durt", "wo", lat.to_f, lon.to_s) 
     	map_snippet.items << SiriMapItem.new(label="gespeicherter Ort", location=siri_location, detailType="BUSINESS_ITEM")
     	print map_snippet.items
-    	utterance = SiriAssistantUtteranceView.new("Juhu, Ich habe mich gefunden!")
+    	utterance = SiriAssistantUtteranceView.new("Yeah! You found me!")
     #add_views.views << utterance
     	add_views.views << map_snippet
     	send_object add_views #send_object takes a hash or a SiriObject object
@@ -377,7 +374,7 @@ def getaddress(str)
    	 	doc = ""
 	end
 	if doc == NIL
-	  say "Fehler beim Suchen - no data", spoken: "Fehler beim Suchen" 
+	  say "Failed to find - no data", spoken: "No data found" 
 	  request_completed
 	  lu = ""
 	elsif
@@ -401,7 +398,7 @@ def getheight(str)
    	 	doc = ""
 	end
 	if doc == NIL
-	  say "Fehler beim Suchen - no data", spoken: "Fehler beim Suchen" 
+	  say "Failed to find - no data", spoken: "No data found" 
 	  request_completed
 	  lu = ""
 	elsif
